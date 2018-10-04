@@ -1,0 +1,1 @@
+regedit /s proxy_40.reg
