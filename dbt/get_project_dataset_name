@@ -1,0 +1,38 @@
+import requests
+import pandas as pd
+from google.cloud import bigquery
+from datetime import datetime, timedelta
+
+yesterday = (datetime.today() - timedelta(days=1)).strftime('%Y%m%d')
+today = datetime.today().strftime('%Y%m%d')
+
+PROJECT_ID = 'project_id'
+TABLE_ID = 'project_id.dbt_metadata.tables_datasets_info_20220414'
+TABLES_GENERAL_INFO = f'project_id.dbt_metadata.tables_general_info_{today}'
+
+bq_client = bigquery.Client(PROJECT_ID)
+
+
+def get_list_datasets():
+    sql_get_list_datasets = f'SELECT distinct catalog_name, schema_name FROM `{TABLE_ID}` '
+    my_results = bq_client.query(sql_get_list_datasets).result()
+    list_datasets = []
+    for row in my_results:
+        my_str = f'{row.catalog_name}.{row.schema_name}'
+        list_datasets.append(my_str)
+    return list_datasets
+
+def get_info_by_dataset_name():
+    list_datasets = get_list_datasets()
+    job_config = bigquery.QueryJobConfig(
+        allow_large_results=True, destination=TABLES_GENERAL_INFO, write_disposition="WRITE_APPEND"
+    )
+
+    for idx, dataset in enumerate(list_datasets):
+        query_dataset = f'select * from `{dataset}`.__TABLES__ '
+        query_job = bq_client.query(query_dataset, job_config=job_config)
+        query_job.result()
+
+
+
+get_info_by_dataset_name()
